@@ -7,16 +7,16 @@ Suite de scripts para organizar colecciones de fotos y vídeos de forma profesio
 ```text
 /
 ├── CAMERAS/                    Carpeta raíz con tus archivos
-│   ├── <Modelo1>/              Carpetas creadas manualmente por modelo de cámara
+│   ├── <Modelo1>/              Carpeta creada manualmente por modelo de cámara
 │   │   ├── foto1.JPG
 │   │   ├── 2024.05/            Subcarpeta mensual (generada por date_sort)
 │   │   │   ├── Tema1/          Carpeta temática (creada manualmente)
 │   │   │   │   ├── imagen.JPG
-│   │   │   │   └── RAW/        Subcarpeta RAW (generada por raw_sort)
-│   │   │   └── SubtemaA/       Carpeta subtemática (creada manualmente)
-│   │   │       ├── imagen2.JPG
-│   │   │       └── RAW/        raw_sort también procesará esta subcarpeta
-│   │   └── …
+│   │   │   │   ├── RAW/        Subcarpeta RAW (generada por raw_sort)
+│   │   │   │   └── Subtema1/   Carpeta subtemática (creada manualmente dentro de Tema1)
+│   │   │   │       ├── imagen2.JPG
+│   │   │   │       └── RAW/    raw_sort también procesará esta subcarpeta
+│   │   │   └── …
 │   ├── <Modelo2>/
 │   └── PRIVATE/                Carpeta destino para directorios marcados con “(X)”
 └── scripts/                    Carpeta con los scripts de la suite
