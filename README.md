@@ -1,4 +1,3 @@
-````markdown
 # Photo Organizer Suite
 
 Suite de scripts para organizar colecciones de fotos y vídeos de forma profesional, basándose en modelo de cámara, fecha de captura, archivos RAW y detección de duplicados. Permite crear y mantener una base de datos de medios sin ensayo y error.
