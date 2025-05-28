@@ -1,4 +1,4 @@
-# Photo Organizer Suite
+# CamWork, una suit de procesamiendo de fotografía
 
 Suite de scripts para organizar colecciones de fotos y vídeos de forma profesional, basándose en modelo de cámara, fecha de captura. Permite crear y mantener una base de datos de fotos sin tener que invertir mucho tiempo en trabajo manual, separando archivos RAW de el resto de archivos y permitiendo una busqueda de duplicados usando SHA256, detectando asi solo duplicados reales, y no falsos duplicados como que tengan el mismo nombre de archivo.
 
