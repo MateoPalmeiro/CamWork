@@ -1,3 +1,4 @@
+````markdown
 # Photo Organizer Suite
 
 Suite de scripts para organizar colecciones de fotos y vídeos de forma profesional, basándose en modelo de cámara, fecha de captura, archivos RAW y detección de duplicados. Permite crear y mantener una base de datos de medios sin ensayo y error.
@@ -9,10 +10,13 @@ Suite de scripts para organizar colecciones de fotos y vídeos de forma profesio
 ├── CAMERAS/                    Carpeta raíz con tus archivos
 │   ├── <Modelo1>/              Carpetas creadas manualmente por modelo de cámara
 │   │   ├── foto1.JPG
-│   │   ├── 2024.05/            Subcarpetas mensuales (generadas por date_sort)
-│   │   │   ├── Tema1/
+│   │   ├── 2024.05/            Subcarpeta mensual (generada por date_sort)
+│   │   │   ├── Tema1/          Carpeta temática (creada manualmente)
 │   │   │   │   ├── imagen.JPG
 │   │   │   │   └── RAW/        Subcarpeta RAW (generada por raw_sort)
+│   │   │   └── SubtemaA/       Carpeta subtemática (creada manualmente)
+│   │   │       ├── imagen2.JPG
+│   │   │       └── RAW/        raw_sort también procesará esta subcarpeta
 │   │   └── …
 │   ├── <Modelo2>/
 │   └── PRIVATE/                Carpeta destino para directorios marcados con “(X)”
@@ -23,8 +27,13 @@ Suite de scripts para organizar colecciones de fotos y vídeos de forma profesio
     ├── raw_sort_v1_estable.PY
     ├── dup_search_v2.4_estable_tested.PY
     ├── copiar_private_estable.py
-    └── stats_developing.py     (experimental, uso no recomendado)
-```
+    └── stats_developing.py     (experimental)
+````
+
+> **Nota**:
+>
+> * Las carpetas de **modelo de cámara**, **temáticas** y **subtemáticas** deben **crearse manualmente** dentro de `CAMERAS/`.
+> * Cualquier subcarpeta temática adicional (por ejemplo `SubtemaA`) se procesa de igual forma que una temática normal: los RAW sueltos se agrupan en su propia subcarpeta `RAW/`.
 
 ## Requisitos
 
@@ -78,7 +87,7 @@ Suite de scripts para organizar colecciones de fotos y vídeos de forma profesio
    ```
 
    * Solicita selección de modelos.
-   * Dentro de cada tema y subtema, crea `RAW/` y mueve los `.cr2` y `.arw` sueltos.
+   * Dentro de cada **tema** y de cada **subtema**, crea `RAW/` y mueve los `.cr2` y `.arw` sueltos.
    * Omite y registra si no hay archivos RAW o si hay errores.
 
 6. **Detectar duplicados exactos (SHA256)**
@@ -98,7 +107,7 @@ Suite de scripts para organizar colecciones de fotos y vídeos de forma profesio
    ```
 
    * Crea `CAMERAS/PRIVATE/` si hace falta.
-   * Copia cualquier directorio con nombre que contenga `(X)`, preservando la jerarquía.
+   * Copia cualquier directorio con nombre que contenga `(X)` (todo su contenido) a `PRIVATE/`.
    * Omite destinos ya existentes (no elimina ni sobrescribe).
 
 8. **Estadísticas (experimental)**
@@ -115,16 +124,16 @@ Suite de scripts para organizar colecciones de fotos y vídeos de forma profesio
 1. Ejecutar **scan\_exif** para identificar modelos.
 2. Ajustar `MODEL_TO_FOLDER` y ejecutar **model\_sort**.
 3. Ejecutar **date\_sort** para estructura mensual.
-4. Ejecutar **raw\_sort** para agrupar RAW.
-5. Ejecutar **dup\_search** para eliminar duplicados exactos.
+4. Ejecutar **raw\_sort** para agrupar RAW (también en subtemáticas).
+5. Ejecutar **dup\_search** para detectar duplicados exactos.
 6. Ejecutar **copiar\_private** para extraer carpetas marcadas.
-7. (Opcional) Ejecutar **stats\_developing** para generar estadísticas.
+7. (Opcional) Ejecutar **stats\_developing** para generar estadísticas globales.
 
 ## Manejo de errores
 
-* **ExifTool ausente**: scripts basados en EXIF fallarán.
-* **Permiso denegado**: se registra y se omite el archivo o carpeta afectada.
+* **ExifTool ausente**: scripts que dependen de EXIF fallarán.
+* **Permiso denegado**: se registra y se omite el elemento afectado.
 * **EXIF no mapeado**: en model\_sort, el archivo permanece en origen.
 * **Duplicados detectados**: no se sobrescribe, se omite y se lista en el log.
-* **Destino inexistente**: se omite y se registra.
+* **Destinos inexistentes**: se omite y se registra.
 * **Sin carpetas mensuales**: date\_sort registra “sin cambios”.
