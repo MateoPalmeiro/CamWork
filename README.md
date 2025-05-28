@@ -120,13 +120,77 @@ Suite de scripts para organizar colecciones de fotos y vídeos de forma profesio
 
 ## Flujo de trabajo recomendado
 
-1. Ejecutar **scan\_exif** para identificar modelos.
-2. Ajustar `MODEL_TO_FOLDER` y ejecutar **model\_sort**.
-3. Ejecutar **date\_sort** para estructura mensual.
-4. Ejecutar **raw\_sort** para agrupar RAW (también en subtemáticas).
-5. Ejecutar **dup\_search** para detectar duplicados exactos.
-6. Ejecutar **copiar\_private** para extraer carpetas marcadas.
-7. (Opcional) Ejecutar **stats\_developing** para generar estadísticas globales.
+1. **Preparar la estructura inicial**  
+   - Crear la carpeta raíz `CAMERAS/` en el directorio del proyecto.  
+   - Crear una carpeta `scripts/` paralela y mover todos los `.PY` ahí.
+
+2. **Importar archivos**  
+   - Extraer las fotos y vídeos de la tarjeta SD directamente en `CAMERAS/` (sin subcarpetas).
+
+3. **Detectar modelos y extensiones**  
+   ```bash
+   python3 scripts/scan_exif_v1_estable.PY
+
+* Obtiene un log y un resumen con todos los modelos EXIF y extensiones únicas.
+
+4. **Clasificar por modelo**
+
+   * Editar el diccionario `MODEL_TO_FOLDER` en `scripts/model_sort_v2_estable.PY`.
+
+   ```bash
+   python3 scripts/model_sort_v2_estable.PY
+   ```
+
+   * Mueve cada archivo suelto en `CAMERAS/` a su carpeta `CAMERAS/<Modelo>/`.
+
+5. **Ordenar por fecha**
+
+   ```bash
+   python3 scripts/date_sort_v1.2_estable.PY
+   ```
+
+   * Crea subcarpetas `YYYY.MM` dentro de cada `CAMERAS/<Modelo>/` y mueve las fotos sueltas según fecha de captura.
+
+6. **Intervención manual: crear temáticas y subtemáticas**
+
+   * Dentro de cada `CAMERAS/<Modelo>/YYYY.MM/`, crear manualmente las carpetas temáticas (por ejemplo `Cumpleaños/`).
+   * Si es necesario, dentro de cada temática crear subcarpetas subtemáticas (por ejemplo `Cumpleaños/Subtema1/`).
+
+7. **Agrupar archivos RAW**
+
+   ```bash
+   python3 scripts/raw_sort_v1_estable.PY
+   ```
+
+   * Para cada temática y cada subtemática crea `RAW/` y mueve los RAW sueltos allí.
+
+8. **Detectar duplicados exactos**
+
+   ```bash
+   python3 scripts/dup_search_v2.4_estable_tested.PY
+   ```
+
+   * Busca ficheros con mismo nombre+extensión dentro de cada modelo y compara SHA256.
+
+9. **Copiar carpetas marcadas “(X)”**
+
+   ```bash
+   python3 scripts/copiar_private_estable.py
+   ```
+
+   * Copia directorios cuyo nombre contenga `(X)` a `CAMERAS/PRIVATE/`, sin sobrescribir.
+
+10. **Estadísticas (experimental)**
+
+    ```bash
+    python3 scripts/stats_developing.py
+    ```
+
+    * Genera gráficos y un informe con estadísticas globales (versión temprana, uso no recomendado).
+
+```
+```
+
 
 ## Manejo de errores
 
