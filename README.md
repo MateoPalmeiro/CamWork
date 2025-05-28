@@ -6,7 +6,7 @@ Suite de scripts para organizar colecciones de fotos y vídeos de forma profesio
 
 ```text
 /
-├── CAMERAS/                    Carpeta raíz con tus archivos
+├── CAMARAS/                    Carpeta raíz con tus archivos
 │   ├── <Modelo1>/              Carpeta creada manualmente por modelo de cámara
 │   │   ├── foto1.JPG
 │   │   ├── 2024.05/            Subcarpeta mensual (generada por date_sort)
@@ -31,7 +31,7 @@ Suite de scripts para organizar colecciones de fotos y vídeos de forma profesio
 
 > **Nota**:
 >
-> * Las carpetas de **modelo de cámara**, **temáticas** y **subtemáticas** deben **crearse manualmente** dentro de `CAMERAS/`.
+> * Las carpetas de **modelo de cámara**, **temáticas** y **subtemáticas** deben **crearse manualmente** dentro de `CAMARAS/`.
 > * Cualquier subcarpeta temática adicional (por ejemplo `SubtemaA`) se procesa de igual forma que una temática normal: los RAW sueltos se agrupan en su propia subcarpeta `RAW/`.
 
 ## Requisitos
@@ -47,7 +47,7 @@ Suite de scripts para organizar colecciones de fotos y vídeos de forma profesio
 ## Guía de uso
 
 1. **Preparar las fotos**
-   Extrae las imágenes y vídeos de la tarjeta SD a `CAMERAS/`, sin crear subcarpetas adicionales.
+   Extrae las imágenes y vídeos de la tarjeta SD a `CAMARAS/`, sin crear subcarpetas adicionales.
 
 2. **Detectar modelos y extensiones**
 
@@ -59,7 +59,7 @@ Suite de scripts para organizar colecciones de fotos y vídeos de forma profesio
 
 3. **Clasificar por modelo**
 
-   * Edita `MODEL_TO_FOLDER` en `model_sort_v2_estable.PY` para mapear cada cadena EXIF a la carpeta correspondiente en `CAMERAS/`.
+   * Edita `MODEL_TO_FOLDER` en `model_sort_v2_estable.PY` para mapear cada cadena EXIF a la carpeta correspondiente en `CAMARAS/`.
 
    ```bash
    python3 scripts/model_sort_v2_estable.PY
@@ -95,7 +95,7 @@ Suite de scripts para organizar colecciones de fotos y vídeos de forma profesio
    python3 scripts/dup_search_v2.4_estable_tested.PY
    ```
 
-   * Ignora `CAMERAS/PRIVATE/`.
+   * Ignora `CAMARAS/PRIVATE/`.
    * Para cada modelo, agrupa por nombre+extensión.
    * Solo para nombres repetidos calcula SHA256 y registra las rutas con hash idéntico.
 
@@ -105,7 +105,7 @@ Suite de scripts para organizar colecciones de fotos y vídeos de forma profesio
    python3 scripts/copiar_private_estable.py
    ```
 
-   * Crea `CAMERAS/PRIVATE/` si hace falta.
+   * Crea `CAMARAS/PRIVATE/` si hace falta.
    * Copia cualquier directorio con nombre que contenga `(X)` (todo su contenido) a `PRIVATE/`.
    * Omite destinos ya existentes (no elimina ni sobrescribe).
 
