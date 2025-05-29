@@ -31,13 +31,13 @@ All scripts write detailed logs and generate PDF summaries to document each oper
 │   ├── <CameraModel2>/
 │   └── PRIVATE/                    Destination for folders marked with “(X)”
 └── scripts/                        All Python scripts
-├── scan\_exif\_v1\_estable.PY
-├── model\_sort\_v2\_estable.PY
-├── date\_sort\_v1.2\_estable.PY
-├── raw\_sort\_v1\_estable.PY
-├── dup\_search\_v2.4\_estable\_tested.PY
-├── copiar\_private\_estable.py
-└── stats\_developing.py         (experimental, use not recommended)
+├── scan_exif_v1_estable.PY
+├── model_sort_v2_estable.PY
+├── date_sort_v1.2_estable.PY
+├── raw_sort_v1_estable.PY
+├── dup_search_v2.4_estable_tested.PY
+├── copiar_private_estable.py
+└── stats_developing.py         (experimental, use not recommended)
 
 ````
 
@@ -54,8 +54,7 @@ All scripts write detailed logs and generate PDF summaries to document each oper
 - Python packages:
   ```bash
   pip install fpdf pillow
-````
-
+  
 ---
 
 ## Usage Guide
