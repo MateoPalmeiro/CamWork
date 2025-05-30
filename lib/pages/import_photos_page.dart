@@ -70,17 +70,22 @@ class _ImportPhotosPageState extends State<ImportPhotosPage> {
     await service.runImport(
       askFolderForModel: _askFolderForModel,
       onLog: _appendLog,
-      onProgress: (p) => setState(() => _progress = p),
-      onError: (err) => _errors.add(err),
+      onError: (err) {
+        if (mounted) _errors.add(err);
+      },
+      onProgress: (p) {
+        if (mounted) setState(() => _progress = p);
+      },
       dryRun: _dryRun,
     );
 
+    if (!mounted) return;
     setState(() => _isRunning = false);
 
     if (_errors.isNotEmpty) {
       final retry = await showDialog<bool>(
         context: context,
-        builder: (_) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           title: Text('Se encontraron ${_errors.length} errores'),
           content: SizedBox(
             width: double.maxFinite,
@@ -90,12 +95,20 @@ class _ImportPhotosPageState extends State<ImportPhotosPage> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Cerrar')),
-            TextButton(onPressed: () => Navigator.pop(context, true),  child: Text('Reintentar')),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cerrar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Reintentar'),
+            ),
           ],
         ),
       );
-      if (retry == true) _startImport();
+      if (retry == true && mounted) {
+        _startImport();
+      }
     }
   }
 
@@ -105,21 +118,20 @@ class _ImportPhotosPageState extends State<ImportPhotosPage> {
     if (mapped != null) return mapped;
 
     final camerasPath = await _configService.getCamerasPath();
-    if (camerasPath == null) {
-      final folder = model;
-      await _mappingService.setMapping(model, folder);
-      return folder;
-    }
+    final existing = camerasPath == null
+        ? <String>[]
+        : Directory(camerasPath)
+            .listSync()
+            .whereType<Directory>()
+            .map((d) => d.path.split(Platform.pathSeparator).last)
+            .toList();
 
-    final existing = Directory(camerasPath)
-        .listSync()
-        .whereType<Directory>()
-        .map((d) => d.path.split(Platform.pathSeparator).last)
-        .toList();
-
-    final result = await showDialog<String>(
+    final result = await showDialog<String?>(
       context: context,
-      builder: (_) => _ModelFolderDialog(model: model, existing: existing),
+      builder: (dialogContext) => _ModelFolderDialog(
+        model: model,
+        existing: existing,
+      ),
     );
 
     final folder = (result != null && result.isNotEmpty) ? result : model;
@@ -128,6 +140,7 @@ class _ImportPhotosPageState extends State<ImportPhotosPage> {
   }
 
   void _appendLog(String msg) {
+    if (!mounted) return;
     setState(() => _logs.add(msg));
     widget.logger.logToFile(msg);
   }
@@ -221,12 +234,15 @@ class __ModelFolderDialogState extends State<_ModelFolderDialog> {
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, ''), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: const Text('Cancel'),
+        ),
         ElevatedButton(
           onPressed: () {
             final entered = _newController.text.trim();
             final chosen = entered.isNotEmpty ? entered : _selected ?? '';
-            Navigator.pop(context, chosen);
+            Navigator.of(context).pop(chosen);
           },
           child: const Text('OK'),
         ),
