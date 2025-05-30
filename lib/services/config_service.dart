@@ -2,20 +2,27 @@
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// ConfigService persists and retrieves application settings,
-/// such as the CAMERAS root directory path.
+/// ConfigService persiste y recupera la ruta raíz de la aplicación.
+/// De ahí derivamos la ruta a CAMERAS/ automáticamente.
 class ConfigService {
-  static const _keyCamerasPath = 'cameras_path';
+  static const _keyRootPath = 'root_path';
 
-  /// Returns the stored CAMERAS path, or null if not set.
-  Future<String?> getCamerasPath() async {
+  /// Devuelve la ruta raíz configurada, o null si no está establecida.
+  Future<String?> getRootPath() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyCamerasPath);
+    return prefs.getString(_keyRootPath);
   }
 
-  /// Saves the CAMERAS path for future runs.
-  Future<void> setCamerasPath(String path) async {
+  /// Guarda la ruta raíz de la aplicación.
+  Future<void> setRootPath(String path) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyCamerasPath, path);
+    await prefs.setString(_keyRootPath, path);
+  }
+
+  /// Devuelve la ruta a la carpeta CAMERAS/ dentro de la ruta raíz, o null si no hay root.
+  Future<String?> getCamerasPath() async {
+    final root = await getRootPath();
+    if (root == null) return null;
+    return '$root/CAMERAS';
   }
 }
