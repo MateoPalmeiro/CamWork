@@ -1,37 +1,89 @@
+# =====================================
 # Flutter / Dart
+# =====================================
 .dart_tool/
-build/
+.packages
+.pub-cache/
 .flutter-plugins
 .flutter-plugins-dependencies
-.packages
-pubspec.lock
+.flutter-versions
+.pub/
+build/
+**/build/
 
-# ignore VS Code/Flutter DevTools settings
-devtools_options.yaml
+# Generated plugin registrant
+generated_plugin_registrant.*
 
-# Generated config
-package_config.json
-package_config_subset.json
-package_graph.json
-version
+# =====================================
+# Platform folders (generated)
+# =====================================
+android/
+ios/
+linux/
+macos/
+web/
+windows/
 
-# IDE / Editor
-.vscode/
+# =====================================
+# IDE configs
+# =====================================
+# IntelliJ / Android Studio
 .idea/
 *.iml
+*.ipr
+*.iws
 
-# Logs
+# VS Code
+.vscode/
+
+# =====================================
+# Flutter plugins, caches, keystores
+# =====================================
+ios/Flutter/Flutter.podspec
+ios/Pods/
+ios/Runner.xcworkspace/
+ios/Flutter/ephemeral/
+
+android/.gradle/
+android/.idea/
+android/local.properties
+android/app/*.keystore
+
+linux/flutter/.dart_tool/
+linux/flutter/flutter_assemble.vcxproj
+linux/flutter/flutter_assemble.vcxproj.filters
+
+# =====================================
+# Logs & Metadata
+# =====================================
 logs/
 *.log
 
+metadata/
+*.lock
+
+# =====================================
+# Analysis & Metadata files
+# =====================================
+.metadata
+analysis_options.yaml
+
+# =====================================
+# Test outputs
+# =====================================
+coverage/
+
+# =====================================
+# Ignore tests folder
+# =====================================
+test/
+
+# =====================================
+# OS-specific files
+# =====================================
 # macOS
 .DS_Store
 
 # Windows
 Thumbs.db
-
-# Python envs (for your scripts)
-__pycache__/
-*.pyc
-venv/
-env/
+desktop.ini
