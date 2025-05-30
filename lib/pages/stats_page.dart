@@ -4,11 +4,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/stats_service.dart';
 import '../services/config_service.dart';
+import '../services/logging_service.dart';
 
-/// Page for generating statistics and charts for the media collection.
-/// This feature is experimental and may be unreliable.
+/// StatsPage genera estadísticas globales (experimental).
 class StatsPage extends StatefulWidget {
-  const StatsPage({Key? key}) : super(key: key);
+  final LoggingService logger;
+  const StatsPage({Key? key, required this.logger}) : super(key: key);
 
   @override
   _StatsPageState createState() => _StatsPageState();
@@ -18,68 +19,56 @@ class _StatsPageState extends State<StatsPage> {
   final List<String> _logs = [];
   double _progress = 0.0;
   bool _isRunning = false;
+  final _config = ConfigService();
 
-  /// Starts the statistics generation workflow:
-  /// 1. Retrieve saved CAMERAS path
-  /// 2. Run StatsService with callbacks for logging and progress
-  Future<void> _startStatistics() async {
+  Future<void> _startStats() async {
+    final camerasPath = await _config.getCamerasPath();
+    if (camerasPath == null) {
+      setState(() => _logs.add('Error: root path not configured.'));
+      widget.logger.logToFile('Error: root path not configured.');
+      return;
+    }
+
     setState(() {
       _isRunning = true;
       _logs.clear();
       _progress = 0.0;
     });
-
-    final config = ConfigService();
-    final camerasPath = await config.getCamerasPath();
-    if (camerasPath == null) {
-      setState(() {
-        _logs.add('Error: CAMERAS path is not configured.');
-        _isRunning = false;
-      });
-      return;
-    }
+    widget.logger.logToFile('Starting statistics generation at $camerasPath');
 
     final service = StatsService(Directory(camerasPath));
-    await service.generateStatistics(
-      onLog: (message) => setState(() => _logs.add(message)),
-      onProgress: (percent) => setState(() => _progress = percent),
+    await service.generateStats(
+      onLog: (msg) {
+        setState(() => _logs.add(msg));
+        widget.logger.logToFile(msg);
+      },
+      onProgress: (p) {
+        setState(() => _progress = p);
+      },
     );
 
+    widget.logger.logToFile('Statistics generation completed.');
     setState(() => _isRunning = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Statistics'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Statistics (Experimental)')),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            const Text(
-              'This experimental feature analyzes your collection and '
-              'generates charts and a PDF report.',
-            ),
-            const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _isRunning ? null : _startStatistics,
-              child: Text(_isRunning ? 'Generating...' : 'Generate Statistics'),
+              onPressed: _isRunning ? null : _startStats,
+              child: Text(_isRunning ? 'Running...' : 'Run Statistics'),
             ),
             const SizedBox(height: 16),
-            if (_isRunning)
-              LinearProgressIndicator(value: _progress)
-            else
-              const SizedBox(height: 4),
+            if (_isRunning) LinearProgressIndicator(value: _progress),
             const SizedBox(height: 16),
             const Align(
               alignment: Alignment.centerLeft,
-              child: Text(
-                'Logs:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              child: Text('Logs:', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 8),
             Expanded(
@@ -90,10 +79,9 @@ class _StatsPageState extends State<StatsPage> {
                 ),
                 child: ListView.builder(
                   itemCount: _logs.length,
-                  itemBuilder: (_, index) => Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8.0, vertical: 4.0),
-                    child: Text(_logs[index]),
+                  itemBuilder: (_, i) => Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Text(_logs[i]),
                   ),
                 ),
               ),
