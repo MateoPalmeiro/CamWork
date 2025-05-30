@@ -2,27 +2,70 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'pages/home_page.dart';
-import 'pages/settings_page.dart';
+import 'services/installer_service.dart';
 import 'services/config_service.dart';
 import 'services/logging_service.dart';
+import 'pages/home_page.dart';
+import 'pages/settings_page.dart';
 
-void main() async {
+void main(List<String> args) {
   WidgetsFlutterBinding.ensureInitialized();
+  runApp(AppLauncher(args: args));
+}
 
-  // Inicializar LoggingService
-  final logger = LoggingService(basePath: Directory.current.path);
-  await logger.init();
-  logger.logToFile('Application started');
+class AppLauncher extends StatelessWidget {
+  final List<String> args;
+  const AppLauncher({Key? key, required this.args}) : super(key: key);
 
-  // Comprobar si ya hay root_path configurado
-  final config = ConfigService();
-  final root = await config.getRootPath();
+  @override
+  Widget build(BuildContext context) {
+    final mode = args.contains('--silent')
+        ? InstallMode.silent
+        : InstallMode.interactive;
+    final installer = InstallerService(mode: mode);
 
-  runApp(CamWorkApp(
-    logger: logger,
-    initialRootPath: root,
-  ));
+    return MaterialApp(
+      title: 'CamWork Launcher',
+      home: Builder(
+        builder: (ctx) {
+          // Mientras comprobamos dependencias, mostramos un spinner
+          if (mode == InstallMode.silent) {
+            installer.handleSilent().then((_) {
+              _initializeAndRun(ctx);
+            });
+          } else {
+            installer.handleInteractive(ctx).then((_) {
+              _initializeAndRun(ctx);
+            });
+          }
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _initializeAndRun(BuildContext ctx) async {
+    // 1) Logging
+    final logger = LoggingService(basePath: Directory.current.path);
+    await logger.init();
+    logger.logToFile('Application started');
+
+    // 2) Config
+    final config = ConfigService();
+    final root = await config.getRootPath();
+
+    // 3) Navegar a la app principal
+    Navigator.of(ctx).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => CamWorkApp(
+          logger: logger,
+          initialRootPath: root,
+        ),
+      ),
+    );
+  }
 }
 
 class CamWorkApp extends StatelessWidget {
@@ -41,7 +84,6 @@ class CamWorkApp extends StatelessWidget {
       title: 'CamWork',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue),
-      // Si no hay root_path vamos a SettingsPage, si no a HomePage
       home: initialRootPath == null
           ? SettingsPage(logger: logger)
           : HomePage(logger: logger),
