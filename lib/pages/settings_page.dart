@@ -1,14 +1,12 @@
 // lib/pages/settings_page.dart
 
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import '../services/config_service.dart';
 import '../services/logging_service.dart';
-import 'home_page.dart';  // ← Import añadido
+import '../services/mapping_service.dart';
+import 'mapping_page.dart';
 
-/// SettingsPage allows the user to select and persist the application's root path.
-/// Upon saving, it creates the subfolders: CAMERAS/, logs/, pdf/, metadata/
+/// Página de ajustes donde se configura la carpeta raíz y ahora se accede a mappings
 class SettingsPage extends StatefulWidget {
   final LoggingService logger;
   const SettingsPage({Key? key, required this.logger}) : super(key: key);
@@ -18,78 +16,72 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  String? _rootPath;
-  final _config = ConfigService();
+  final ConfigService _configService = ConfigService();
+  late TextEditingController _rootController;
 
   @override
   void initState() {
     super.initState();
-    widget.logger.logToFile('Opened SettingsPage');
-    _loadRootPath();
+    _rootController = TextEditingController();
+    _loadRoot();
   }
 
-  Future<void> _loadRootPath() async {
-    final path = await _config.getRootPath();
-    setState(() => _rootPath = path);
-  }
-
-  Future<void> _pickRootFolder() async {
-    final selected = await FilePicker.platform.getDirectoryPath();
-    if (selected != null) {
-      setState(() => _rootPath = selected);
-      widget.logger.logToFile('Picked root folder: $selected');
+  Future<void> _loadRoot() async {
+    final root = await _configService.getRootPath();
+    if (root != null) {
+      _rootController.text = root;
     }
   }
 
-  Future<void> _saveRootPath() async {
-    if (_rootPath == null) return;
-    await _config.setRootPath(_rootPath!);
-    widget.logger.logToFile('Saved root path: $_rootPath');
-
-    // create subfolders
-    for (final dir in ['CAMERAS', 'logs', 'pdf', 'metadata']) {
-      final folder = Directory('$_rootPath/$dir');
-      if (!folder.existsSync()) {
-        folder.createSync(recursive: true);
-        widget.logger.logToFile('Created folder: ${folder.path}');
-      }
+  Future<void> _saveRoot() async {
+    final path = _rootController.text.trim();
+    if (path.isNotEmpty) {
+      await _configService.setRootPath(path);
+      widget.logger.logToFile('Root path set to $path');
+      Navigator.pushReplacementNamed(context, '/');
     }
-
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => HomePage(logger: widget.logger),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text('Ajustes')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            const Text(
-              'Select the root folder where CamWork will store its data.',
+            TextField(
+              controller: _rootController,
+              decoration: InputDecoration(labelText: 'Carpeta raíz'),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.folder_open),
-              label: Text(
-                _rootPath == null ? 'Choose Root Folder' : _rootPath!,
-                overflow: TextOverflow.ellipsis,
-              ),
-              onPressed: _pickRootFolder,
-            ),
-            const Spacer(),
+            SizedBox(height: 16),
             ElevatedButton(
-              onPressed: (_rootPath == null) ? null : _saveRootPath,
-              child: const Text('Save and Continue'),
+              onPressed: _saveRoot,
+              child: Text('Guardar'),
+            ),
+            Divider(height: 32),
+            ListTile(
+              leading: Icon(Icons.settings),
+              title: Text('Editar Mappings de Modelos'),
+              onTap: () {
+                final svc = MappingService();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MappingPage(mappingService: svc),
+                  ),
+                );
+              },
             ),
           ],
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _rootController.dispose();
+    super.dispose();
   }
 }
