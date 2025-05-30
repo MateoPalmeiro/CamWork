@@ -14,8 +14,8 @@ class AboutPage extends StatefulWidget {
 
 class _AboutPageState extends State<AboutPage> {
   String _appName = 'CamWork';
-  String _version = '1.0.0';
-  String _buildNumber = '';
+  String _version = '0.1.5';
+  String _buildNumber = '12a';
   
   @override
   void initState() {
@@ -44,13 +44,13 @@ class _AboutPageState extends State<AboutPage> {
             Text('$_appName v$_version ($_buildNumber)',
                 style: const TextStyle(fontSize: 18)),
             const SizedBox(height: 16),
-            const Text('Author: Your Name'),
+            const Text('Author: Mateo 'botika' Palmeiro Muñiz'),
             const SizedBox(height: 8),
             GestureDetector(
               onTap: () =>
-                  launchUrlString('https://github.com/yourrepo'), // ahora definido
+                  launchUrlString('https://github.com/MateoPalmeiro'), // ahora definido
               child: const Text(
-                'https://github.com/yourrepo',
+                'https://github.com/MateoPalmeiro',
                 style: TextStyle(
                     color: Colors.blue, decoration: TextDecoration.underline),
               ),
