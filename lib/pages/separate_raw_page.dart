@@ -4,11 +4,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/raw_service.dart';
 import '../services/config_service.dart';
+import '../services/logging_service.dart';
 
-/// Page for grouping RAW files (`.cr2`, `.arw`) into `RAW/` subfolders
-/// under each thematic and sub-thematic folder.
+/// SeparateRawPage agrupa .cr2/.arw sueltos dentro de CAMERAS/ en RAW/ subcarpetas.
 class SeparateRawPage extends StatefulWidget {
-  const SeparateRawPage({Key? key}) : super(key: key);
+  final LoggingService logger;
+  const SeparateRawPage({Key? key, required this.logger}) : super(key: key);
 
   @override
   _SeparateRawPageState createState() => _SeparateRawPageState();
@@ -18,66 +19,56 @@ class _SeparateRawPageState extends State<SeparateRawPage> {
   final List<String> _logs = [];
   double _progress = 0.0;
   bool _isRunning = false;
+  final _config = ConfigService();
 
-  /// Starts the RAW separation workflow:
-  /// 1. Retrieve saved CAMERAS path
-  /// 2. Run RawService with callbacks for logging and progress
-  Future<void> _startRawSeparation() async {
+  Future<void> _startSeparateRaw() async {
+    final camerasPath = await _config.getCamerasPath();
+    if (camerasPath == null) {
+      setState(() => _logs.add('Error: root path not configured.'));
+      widget.logger.logToFile('Error: root path not configured.');
+      return;
+    }
+
     setState(() {
       _isRunning = true;
       _logs.clear();
       _progress = 0.0;
     });
-
-    final config = ConfigService();
-    final camerasPath = await config.getCamerasPath();
-    if (camerasPath == null) {
-      setState(() {
-        _logs.add('Error: CAMERAS path is not configured.');
-        _isRunning = false;
-      });
-      return;
-    }
+    widget.logger.logToFile('Starting RAW separation at $camerasPath');
 
     final service = RawService(Directory(camerasPath));
     await service.separateRaw(
-      onLog: (message) => setState(() => _logs.add(message)),
-      onProgress: (percent) => setState(() => _progress = percent),
+      onLog: (msg) {
+        setState(() => _logs.add(msg));
+        widget.logger.logToFile(msg);
+      },
+      onProgress: (p) {
+        setState(() => _progress = p);
+      },
     );
 
+    widget.logger.logToFile('RAW separation completed.');
     setState(() => _isRunning = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Separate RAW'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Separate RAW')),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            const Text(
-              'This will scan each thematic and sub-thematic folder '
-              'and move RAW files into a `RAW/` subfolder.',
-            ),
-            const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _isRunning ? null : _startRawSeparation,
-              child: Text(_isRunning ? 'Processing...' : 'Start Separation'),
+              onPressed: _isRunning ? null : _startSeparateRaw,
+              child: Text(_isRunning ? 'Processing...' : 'Start RAW Separation'),
             ),
             const SizedBox(height: 16),
-            if (_isRunning)
-              LinearProgressIndicator(value: _progress)
-            else
-              const SizedBox(height: 4),
+            if (_isRunning) LinearProgressIndicator(value: _progress),
             const SizedBox(height: 16),
             const Align(
               alignment: Alignment.centerLeft,
-              child:
-                  Text('Logs:', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text('Logs:', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 8),
             Expanded(
@@ -88,10 +79,9 @@ class _SeparateRawPageState extends State<SeparateRawPage> {
                 ),
                 child: ListView.builder(
                   itemCount: _logs.length,
-                  itemBuilder: (_, index) => Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8.0, vertical: 4.0),
-                    child: Text(_logs[index]),
+                  itemBuilder: (_, i) => Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Text(_logs[i]),
                   ),
                 ),
               ),
