@@ -6,8 +6,6 @@ import '../utils/exif.dart';
 import '../utils/file_utils.dart';
 import '../utils/pdf_report.dart';
 
-/// Service that handles both model sorting and date-based grouping.
-/// Moves photos from a source directory into CAMERAS/<model>/YYYY.MM/.
 class ImportService {
   final Directory sourceDir;
   final Directory camerasDir;
@@ -17,10 +15,9 @@ class ImportService {
     required this.camerasDir,
   });
 
-  /// Executes the import workflow.
-  /// - onLog: callback for status messages.
-  /// - onProgress: callback for progress (0.0–1.0).
+  /// askFolderForModel: pide la carpeta destino para cada modelo EXIF.
   Future<void> runImport({
+    required Future<String> Function(String model) askFolderForModel,
     required void Function(String) onLog,
     required void Function(double) onProgress,
   }) async {
@@ -29,43 +26,42 @@ class ImportService {
         .whereType<File>()
         .where(FileUtils.isPhoto)
         .toList();
-
     final total = files.length;
     if (total == 0) {
-      onLog('No photo files found in source directory.');
+      onLog('No photo files found.');
       return;
     }
 
     var processed = 0;
     for (final file in files) {
       try {
-        // 1) Read EXIF camera model
+        // 1) Modelo EXIF
         final model = await ExifToolkit.readCameraModel(file);
-        final modelDir = Directory(p.join(camerasDir.path, model));
+        final folderName = await askFolderForModel(model);
+        final modelDir = Directory(p.join(camerasDir.path, folderName));
         if (!modelDir.existsSync()) {
           modelDir.createSync(recursive: true);
           onLog('Created model folder: ${modelDir.path}');
         }
 
-        // 2) Move file to model folder
-        final destModelPath = p.join(modelDir.path, p.basename(file.path));
-        FileUtils.moveFileSafe(file, File(destModelPath));
-        onLog('Moved to model folder: $destModelPath');
+        // 2) Mover a CAMERAS/<folderName>
+        final intermediate = p.join(modelDir.path, p.basename(file.path));
+        FileUtils.moveFileSafe(file, File(intermediate));
+        onLog('Moved to model folder: $intermediate');
 
-        // 3) Read EXIF date or fallback
-        final dt = await ExifToolkit.readDateTimeOriginal(File(destModelPath)) ??
-            FileUtils.fileDate(File(destModelPath));
-
-        // 4) Adjust month boundary
+        // 3) Fecha EXIF o fallback
+        final dt = await ExifToolkit.readDateTimeOriginal(File(intermediate))
+            ?? FileUtils.fileDate(File(intermediate));
         final adj = FileUtils.adjustMonth(dt);
 
-        // 5) Create YYYY.MM folder and move there
-        final dateFolderName = '${adj.year}.${adj.month.toString().padLeft(2, '0')}';
-        final dateDir = Directory(p.join(modelDir.path, dateFolderName));
+        // 4) Mover a YYYY.MM
+        final yymm = '${adj.year}.${adj.month.toString().padLeft(2, '0')}';
+        final dateDir = Directory(p.join(modelDir.path, yymm));
         if (!dateDir.existsSync()) dateDir.createSync();
-        final destDatePath = p.join(dateDir.path, p.basename(destModelPath));
-        FileUtils.moveFileSafe(File(destModelPath), File(destDatePath));
-        onLog('Moved to date folder: $destDatePath');
+        final finalPath = p.join(dateDir.path, p.basename(intermediate));
+        FileUtils.moveFileSafe(File(intermediate), File(finalPath));
+        onLog('Moved to date folder: $finalPath');
+
       } catch (e) {
         onLog('Error processing ${file.path}: $e');
       }
@@ -74,10 +70,10 @@ class ImportService {
       onProgress(processed / total);
     }
 
-    // 6) Generate PDF summary
+    // Generar resumen PDF
     await PdfReport.generateImportSummary(
       outputDir: Directory('pdf'),
-      logLines: const [], // could pass collected logs here
+      logLines: [], // opcional: pasar logs
     );
     onLog('Import complete. PDF summary generated.');
   }
