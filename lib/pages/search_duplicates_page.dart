@@ -4,11 +4,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/duplicate_service.dart';
 import '../services/config_service.dart';
+import '../services/logging_service.dart';
 
-/// Page for searching exact duplicates using SHA256 within each camera model.
-/// Shows progress and logs of the duplicate detection workflow.
+/// SearchDuplicatesPage escanea CAMERAS/ en busca de duplicados exactos SHA256.
 class SearchDuplicatesPage extends StatefulWidget {
-  const SearchDuplicatesPage({Key? key}) : super(key: key);
+  final LoggingService logger;
+  const SearchDuplicatesPage({Key? key, required this.logger}) : super(key: key);
 
   @override
   _SearchDuplicatesPageState createState() => _SearchDuplicatesPageState();
@@ -18,70 +19,56 @@ class _SearchDuplicatesPageState extends State<SearchDuplicatesPage> {
   final List<String> _logs = [];
   double _progress = 0.0;
   bool _isRunning = false;
+  final _config = ConfigService();
 
-  /// Starts the duplicate search workflow:
-  /// 1. Retrieve saved CAMERAS path
-  /// 2. Run DuplicateService with callbacks for logging and progress
-  Future<void> _startDuplicateSearch() async {
+  Future<void> _startScan() async {
+    final camerasPath = await _config.getCamerasPath();
+    if (camerasPath == null) {
+      setState(() => _logs.add('Error: root path not configured.'));
+      widget.logger.logToFile('Error: root path not configured.');
+      return;
+    }
+
     setState(() {
       _isRunning = true;
       _logs.clear();
       _progress = 0.0;
     });
-
-    final config = ConfigService();
-    final camerasPath = await config.getCamerasPath();
-    if (camerasPath == null) {
-      setState(() {
-        _logs.add('Error: CAMERAS path is not configured.');
-        _isRunning = false;
-      });
-      return;
-    }
+    widget.logger.logToFile('Starting duplicate scan at $camerasPath');
 
     final service = DuplicateService(Directory(camerasPath));
     await service.findDuplicates(
-      onLog: (message) {
-        setState(() => _logs.add(message));
+      onLog: (msg) {
+        setState(() => _logs.add(msg));
+        widget.logger.logToFile(msg);
       },
-      onProgress: (percent) {
-        setState(() => _progress = percent);
+      onProgress: (p) {
+        setState(() => _progress = p);
       },
     );
 
+    widget.logger.logToFile('Duplicate scan completed.');
     setState(() => _isRunning = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Search Duplicates'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Search Duplicates')),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            const Text(
-              'This will scan each camera model folder for files with matching '
-              'name and extension, then compute SHA256 to identify true duplicates.',
-            ),
-            const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _isRunning ? null : _startDuplicateSearch,
+              onPressed: _isRunning ? null : _startScan,
               child: Text(_isRunning ? 'Scanning...' : 'Start Scan'),
             ),
             const SizedBox(height: 16),
-            if (_isRunning)
-              LinearProgressIndicator(value: _progress)
-            else
-              const SizedBox(height: 4),
+            if (_isRunning) LinearProgressIndicator(value: _progress),
             const SizedBox(height: 16),
             const Align(
               alignment: Alignment.centerLeft,
-              child:
-                  Text('Logs:', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text('Logs:', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 8),
             Expanded(
@@ -92,10 +79,9 @@ class _SearchDuplicatesPageState extends State<SearchDuplicatesPage> {
                 ),
                 child: ListView.builder(
                   itemCount: _logs.length,
-                  itemBuilder: (_, index) => Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8.0, vertical: 4.0),
-                    child: Text(_logs[index]),
+                  itemBuilder: (_, i) => Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Text(_logs[i]),
                   ),
                 ),
               ),
