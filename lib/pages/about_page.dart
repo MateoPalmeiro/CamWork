@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher_string.dart';  // <-- añadido
 
 /// AboutPage displays app metadata: name, version, author and repository link.
 class AboutPage extends StatefulWidget {
@@ -40,15 +41,18 @@ class _AboutPageState extends State<AboutPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('$_appName v$_version ($_buildNumber)', style: const TextStyle(fontSize: 18)),
+            Text('$_appName v$_version ($_buildNumber)',
+                style: const TextStyle(fontSize: 18)),
             const SizedBox(height: 16),
             const Text('Author: Your Name'),
             const SizedBox(height: 8),
             GestureDetector(
-              onTap: () => launchUrlString('https://github.com/yourrepo'),
+              onTap: () =>
+                  launchUrlString('https://github.com/yourrepo'), // ahora definido
               child: const Text(
                 'https://github.com/yourrepo',
-                style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                style: TextStyle(
+                    color: Colors.blue, decoration: TextDecoration.underline),
               ),
             ),
             const Spacer(),

@@ -4,11 +4,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/config_service.dart';
+import '../services/logging_service.dart';
+import 'home_page.dart';  // ← Import añadido
 
 /// SettingsPage allows the user to select and persist the application's root path.
 /// Upon saving, it creates the subfolders: CAMERAS/, logs/, pdf/, metadata/
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({Key? key}) : super(key: key);
+  final LoggingService logger;
+  const SettingsPage({Key? key, required this.logger}) : super(key: key);
 
   @override
   _SettingsPageState createState() => _SettingsPageState();
@@ -21,6 +24,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
+    widget.logger.logToFile('Opened SettingsPage');
     _loadRootPath();
   }
 
@@ -33,19 +37,29 @@ class _SettingsPageState extends State<SettingsPage> {
     final selected = await FilePicker.platform.getDirectoryPath();
     if (selected != null) {
       setState(() => _rootPath = selected);
+      widget.logger.logToFile('Picked root folder: $selected');
     }
   }
 
   Future<void> _saveRootPath() async {
     if (_rootPath == null) return;
     await _config.setRootPath(_rootPath!);
+    widget.logger.logToFile('Saved root path: $_rootPath');
+
     // create subfolders
     for (final dir in ['CAMERAS', 'logs', 'pdf', 'metadata']) {
       final folder = Directory('$_rootPath/$dir');
-      if (!folder.existsSync()) folder.createSync(recursive: true);
+      if (!folder.existsSync()) {
+        folder.createSync(recursive: true);
+        widget.logger.logToFile('Created folder: ${folder.path}');
+      }
     }
-    // navigate to Home
-    Navigator.of(context).pushReplacementNamed('/');
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => HomePage(logger: widget.logger),
+      ),
+    );
   }
 
   @override
@@ -63,9 +77,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ElevatedButton.icon(
               icon: const Icon(Icons.folder_open),
               label: Text(
-                _rootPath == null
-                  ? 'Choose Root Folder'
-                  : _rootPath!,
+                _rootPath == null ? 'Choose Root Folder' : _rootPath!,
                 overflow: TextOverflow.ellipsis,
               ),
               onPressed: _pickRootFolder,

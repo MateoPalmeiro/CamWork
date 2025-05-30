@@ -37,7 +37,7 @@ class _StatsPageState extends State<StatsPage> {
     widget.logger.logToFile('Starting statistics generation at $camerasPath');
 
     final service = StatsService(Directory(camerasPath));
-    await service.generateStats(
+    await service.generateStatistics(
       onLog: (msg) {
         setState(() => _logs.add(msg));
         widget.logger.logToFile(msg);

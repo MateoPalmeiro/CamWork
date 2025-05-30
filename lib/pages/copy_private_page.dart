@@ -1,6 +1,6 @@
 // lib/pages/copy_private_page.dart
 
-import 'dart:io';
+import 'dart:io'; // <-- Necesario para Directory
 import 'package:flutter/material.dart';
 import '../services/private_service.dart';
 import '../services/config_service.dart';
@@ -24,20 +24,23 @@ class _CopyPrivatePageState extends State<CopyPrivatePage> {
   Future<void> _startCopyPrivate() async {
     final camerasPath = await _config.getCamerasPath();
     if (camerasPath == null) {
-      setState(() => _logs.add('Error: root path not configured.'));
-      widget.logger.logToFile('Error: root path not configured.');
+      const err = 'Error: root path not configured.';
+      setState(() => _logs.add(err));
+      widget.logger.logToFile(err);
       return;
     }
 
     setState(() {
       _isRunning = true;
-      _logs.clear();
+      _logs
+        ..clear()
+        ..add('Starting PRIVATE copy...');
       _progress = 0.0;
     });
     widget.logger.logToFile('Starting PRIVATE copy at $camerasPath');
 
     final service = PrivateService(Directory(camerasPath));
-    await service.copyPrivate(
+    await service.copyMarkedFolders( // <-- método correcto
       onLog: (msg) {
         setState(() => _logs.add(msg));
         widget.logger.logToFile(msg);
@@ -48,7 +51,10 @@ class _CopyPrivatePageState extends State<CopyPrivatePage> {
     );
 
     widget.logger.logToFile('PRIVATE copy completed.');
-    setState(() => _isRunning = false);
+    setState(() {
+      _logs.add('PRIVATE copy completed.');
+      _isRunning = false;
+    });
   }
 
   @override
@@ -68,7 +74,8 @@ class _CopyPrivatePageState extends State<CopyPrivatePage> {
             const SizedBox(height: 16),
             const Align(
               alignment: Alignment.centerLeft,
-              child: Text('Logs:', style: TextStyle(fontWeight: FontWeight.bold)),
+              child:
+                  Text('Logs:', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 8),
             Expanded(

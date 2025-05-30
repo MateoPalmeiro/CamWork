@@ -40,6 +40,6 @@ class FileUtils {
     if (dest.existsSync()) {
       return;
     }
-    src.renameSync(dest);
+    src.renameSync(dest.path);
   }
 }

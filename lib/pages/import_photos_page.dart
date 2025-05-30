@@ -7,7 +7,6 @@ import '../services/import_service.dart';
 import '../services/config_service.dart';
 import '../services/mapping_service.dart';
 import '../services/logging_service.dart';
-import '../utils/file_utils.dart';
 
 class ImportPhotosPage extends StatefulWidget {
   final LoggingService logger;
@@ -71,24 +70,28 @@ class _ImportPhotosPageState extends State<ImportPhotosPage> {
     setState(() => _isRunning = false);
   }
 
+  /// Returns a non-null folder name for the given EXIF model.
   Future<String> _askFolderForModel(String model) async {
     final mapped = _mappingService.getFolderForModel(model);
     if (mapped != null) return mapped;
 
-    final camerasPath = await _configService.getCamerasPath()!;
+    final camerasPath = await _configService.getCamerasPath() ?? '';
     final existing = Directory(camerasPath)
         .listSync()
         .whereType<Directory>()
         .map((d) => d.path.split(Platform.pathSeparator).last)
         .toList();
 
-    String? chosen = await showDialog<String>(
+    // Show dialog to choose or create folder
+    final result = await showDialog<String>(
       context: context,
       builder: (_) => _ModelFolderDialog(model: model, existing: existing),
     );
-    chosen ??= model; // fallback
-    await _mappingService.setMapping(model, chosen);
-    return chosen;
+
+    // If user cancelled (result is null), fallback to using model name
+    final folder = result != null && result.isNotEmpty ? result : model;
+    await _mappingService.setMapping(model, folder);
+    return folder;
   }
 
   @override
@@ -108,7 +111,8 @@ class _ImportPhotosPageState extends State<ImportPhotosPage> {
             const SizedBox(height: 16),
             const Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Logs:', style: TextStyle(fontWeight: FontWeight.bold))),
+                child:
+                    Text('Logs:', style: TextStyle(fontWeight: FontWeight.bold))),
             const SizedBox(height: 8),
             Expanded(
               child: Container(
@@ -172,13 +176,12 @@ class __ModelFolderDialogState extends State<_ModelFolderDialog> {
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, null), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context, ''), child: const Text('Cancel')),
         ElevatedButton(
           onPressed: () {
-            final result = _newController.text.isNotEmpty
-                ? _newController.text
-                : _selected;
-            Navigator.pop(context, result);
+            final entered = _newController.text.trim();
+            final chosen = entered.isNotEmpty ? entered : _selected ?? '';
+            Navigator.pop(context, chosen);
           },
           child: const Text('OK'),
         ),
