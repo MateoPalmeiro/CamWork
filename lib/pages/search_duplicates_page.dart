@@ -6,7 +6,6 @@ import '../services/duplicate_service.dart';
 import '../services/config_service.dart';
 import '../services/logging_service.dart';
 
-/// SearchDuplicatesPage escanea CAMERAS/ en busca de duplicados exactos SHA256.
 class SearchDuplicatesPage extends StatefulWidget {
   final LoggingService logger;
   const SearchDuplicatesPage({Key? key, required this.logger}) : super(key: key);
@@ -16,39 +15,109 @@ class SearchDuplicatesPage extends StatefulWidget {
 }
 
 class _SearchDuplicatesPageState extends State<SearchDuplicatesPage> {
-  final List<String> _logs = [];
-  double _progress = 0.0;
+  final _configService = ConfigService();
   bool _isRunning = false;
-  final _config = ConfigService();
+  List<List<File>> _groups = [];
 
-  Future<void> _startScan() async {
-    final camerasPath = await _config.getCamerasPath();
-    if (camerasPath == null) {
-      setState(() => _logs.add('Error: root path not configured.'));
+  Future<void> _runSearch() async {
+    final root = await _configService.getCamerasPath();
+    if (root == null) {
       widget.logger.logToFile('Error: root path not configured.');
       return;
     }
 
     setState(() {
       _isRunning = true;
-      _logs.clear();
-      _progress = 0.0;
+      _groups.clear();
     });
-    widget.logger.logToFile('Starting duplicate scan at $camerasPath');
 
-    final service = DuplicateService(Directory(camerasPath));
-    await service.findDuplicates(
-      onLog: (msg) {
-        setState(() => _logs.add(msg));
-        widget.logger.logToFile(msg);
-      },
-      onProgress: (p) {
-        setState(() => _progress = p);
-      },
+    final camerasDir = Directory(root);
+    final service = DuplicateService(camerasDir);
+
+    final groups = await service.findDuplicateGroups();
+    widget.logger.logToFile('Found ${groups.length} duplicate groups.');
+
+    setState(() {
+      _groups = groups;
+      _isRunning = false;
+    });
+  }
+
+  Future<void> _showPreview(List<File> group, int groupIndex) async {
+    await showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        child: StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Text(
+                    'Duplicates in Group ${groupIndex + 1}',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 12),
+                  for (var i = 0; i < group.length; i += 2)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _imageWithDelete(group, groupIndex, i, setDialogState),
+                        if (i + 1 < group.length)
+                          _imageWithDelete(group, groupIndex, i + 1, setDialogState),
+                      ],
+                    ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Close'),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
     );
+    setState(() {}); // Refresh main list
+  }
 
-    widget.logger.logToFile('Duplicate scan completed.');
-    setState(() => _isRunning = false);
+  Widget _imageWithDelete(
+    List<File> group,
+    int groupIndex,
+    int fileIndex,
+    StateSetter setDialogState,
+  ) {
+    final file = group[fileIndex];
+    return Expanded(
+      child: Column(
+        children: [
+          Image.file(
+            file,
+            width: 150,
+            height: 150,
+            fit: BoxFit.cover,
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_forever),
+            tooltip: 'Delete this file',
+            onPressed: () {
+              try {
+                file.deleteSync();
+                widget.logger.logToFile('Deleted duplicate: ${file.path}');
+                group.removeAt(fileIndex);
+                if (group.length < 2) {
+                  _groups.removeAt(groupIndex);
+                }
+                setDialogState(() {});
+              } catch (e) {
+                widget.logger.logToFile('Error deleting ${file.path}: $e');
+              }
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -60,31 +129,46 @@ class _SearchDuplicatesPageState extends State<SearchDuplicatesPage> {
         child: Column(
           children: [
             ElevatedButton(
-              onPressed: _isRunning ? null : _startScan,
-              child: Text(_isRunning ? 'Scanning...' : 'Start Scan'),
+              onPressed: _isRunning ? null : _runSearch,
+              child: Text(_isRunning ? 'Searching...' : 'Search Duplicates'),
             ),
             const SizedBox(height: 16),
-            if (_isRunning) LinearProgressIndicator(value: _progress),
+            if (_isRunning)
+              const Center(child: CircularProgressIndicator()),
             const SizedBox(height: 16),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Logs:', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            const SizedBox(height: 8),
             Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: ListView.builder(
-                  itemCount: _logs.length,
-                  itemBuilder: (_, i) => Padding(
-                    padding: const EdgeInsets.all(4),
-                    child: Text(_logs[i]),
-                  ),
-                ),
-              ),
+              child: _groups.isEmpty
+                  ? const Center(child: Text('No duplicates found.'))
+                  : ListView.builder(
+                      itemCount: _groups.length,
+                      itemBuilder: (_, i) {
+                        final group = _groups[i];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          child: ListTile(
+                            title: Text('Group ${i + 1} (${group.length} files)'),
+                            subtitle: Row(
+                              children: group.take(2).map((file) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: Image.file(
+                                    file,
+                                    width: 64,
+                                    height: 64,
+                                    fit: BoxFit.cover,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.fullscreen),
+                              tooltip: 'Preview & delete',
+                              onPressed: () => _showPreview(group, i),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),

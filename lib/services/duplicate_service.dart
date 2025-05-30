@@ -4,15 +4,14 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 
-/// Service to detect exact bit-wise duplicates within each camera model folder.
+/// Service to detect exact bit-wise duplicates within each camera model folder,
+/// and to provide duplicate groups for preview.
 class DuplicateService {
   final Directory camerasDir;
 
   DuplicateService(this.camerasDir);
 
-  /// Finds duplicates:
-  /// - Groups files by name+extension.
-  /// - For groups of size>1, computes SHA256 and logs identical pairs.
+  /// Original scan method: logs duplicates as text.
   Future<void> findDuplicates({
     required void Function(String) onLog,
     required void Function(double) onProgress,
@@ -28,20 +27,16 @@ class DuplicateService {
 
     for (final modelDir in modelDirs) {
       onLog('Scanning model: ${modelDir.path}');
-      // Collect all files under this model
-      final files = modelDir
-          .listSync(recursive: true)
-          .whereType<File>()
-          .toList();
+      final files = modelDir.listSync(recursive: true).whereType<File>().toList();
 
-      // Map basename.ext -> list of files
+      // Group by filename
       final Map<String, List<File>> groups = {};
       for (final file in files) {
         final key = p.basename(file.path).toLowerCase();
         groups.putIfAbsent(key, () => []).add(file);
       }
 
-      // For each group >1, compute SHA256
+      // For each group >1, hash and log duplicates
       for (final entry in groups.entries) {
         if (entry.value.length < 2) continue;
         onLog('Comparing group: ${entry.key} (${entry.value.length} files)');
@@ -52,7 +47,6 @@ class DuplicateService {
           final hash = sha256.convert(bytes).toString();
           hashMap.putIfAbsent(hash, () => []).add(file.path);
         }
-        // Report identical hashes
         for (final hEntry in hashMap.entries) {
           if (hEntry.value.length > 1) {
             onLog('  Duplicate hash ${hEntry.key}:');
@@ -68,5 +62,53 @@ class DuplicateService {
     }
 
     onLog('Duplicate scan complete.');
+  }
+
+  /// New method: returns groups of duplicate files for UI preview.
+  Future<List<List<File>>> findDuplicateGroups() async {
+    final groups = <List<File>>[];
+
+    final modelDirs = camerasDir
+        .listSync()
+        .whereType<Directory>()
+        .where((d) => p.basename(d.path) != 'PRIVATE')
+        .toList();
+
+    for (final modelDir in modelDirs) {
+      final files = modelDir.listSync(recursive: true).whereType<File>().toList();
+
+      // Group by filename
+      final Map<String, List<File>> nameMap = {};
+      for (final file in files) {
+        final key = p.basename(file.path).toLowerCase();
+        nameMap.putIfAbsent(key, () => []).add(file);
+      }
+
+      // For each group >1, compute SHA256
+      for (final entry in nameMap.entries.where((e) => e.value.length > 1)) {
+        final hashMap = <String, File>{};
+        for (final file in entry.value) {
+          final bytes = file.readAsBytesSync();
+          final hash = sha256.convert(bytes).toString();
+          if (hashMap.containsKey(hash)) {
+            final existing = hashMap[hash]!;
+            // find or create a group containing `existing`
+            var group = groups.firstWhere(
+              (g) => g.contains(existing),
+              orElse: () {
+                final newGroup = [existing];
+                groups.add(newGroup);
+                return newGroup;
+              },
+            );
+            group.add(file);
+          } else {
+            hashMap[hash] = file;
+          }
+        }
+      }
+    }
+
+    return groups;
   }
 }
